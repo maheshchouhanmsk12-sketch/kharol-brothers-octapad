@@ -724,6 +724,8 @@ export const App: React.FC = () => {
                   config={config}
                   state={state}
                   index={index}
+                  masterVolume={masterVolume}
+                  isMasterMuted={isMuted}
                   isTrack={config.isTrack}
                   isPlayingTrack={!!playingTracks[config.id]}
                   onHit={(_id, vel) => triggerPad(config, vel)}

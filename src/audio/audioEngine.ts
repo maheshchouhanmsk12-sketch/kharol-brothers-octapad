@@ -407,6 +407,7 @@ export class AudioEngine {
           // Start playing: stop any other active track so tempos do not clash
           this.stopOtherTracks(padId)
           trackAudio.playbackRate = pitchMultiplier || 1.0
+          trackAudio.volume = this.isMuted ? 0 : this.masterVolume
           trackAudio.currentTime = 0
           try {
             await trackAudio.play()
@@ -430,17 +431,17 @@ export class AudioEngine {
       sampleBuffer = this.sampleBuffers.get(padId)
     }
 
+    const masterScale = this.isMuted ? 0 : this.masterVolume
+
     if (sampleBuffer) {
-      // Play authentic recorded sample with dynamic strike sensor velocity
+      // Play authentic recorded sample with dynamic strike sensor velocity & master volume scaling
       const source = ctx.createBufferSource()
       source.buffer = sampleBuffer
       source.playbackRate.setValueAtTime(pitchMultiplier, ctx.currentTime)
 
-      // Ephemeral strike sensor gain node:
-      // Human hearing perceives volume logarithmically; an exponential curve creates a distinct,
-      // expressive difference between a gentle tap (0.18 -> ~0.10 volume) and a hard strike (1.35 -> ~1.45 volume).
+      // Ephemeral strike sensor gain node scaled by current master volume dial
       const hitGain = ctx.createGain()
-      const effectiveGain = Math.max(0.06, Math.min(1.5, Math.pow(velocity, 1.35)))
+      const effectiveGain = Math.max(0.001, Math.min(1.5, Math.pow(velocity, 1.35))) * masterScale
       hitGain.gain.setValueAtTime(effectiveGain, ctx.currentTime)
 
       // Dynamic strike timbre filter:
@@ -484,7 +485,7 @@ export class AudioEngine {
                         'sam_accent')) as InstrumentId
 
       this.synth.play(synthId, {
-        velocity,
+        velocity: velocity * masterScale,
         pitchMultiplier,
         destination: padGain
       })
@@ -608,17 +609,22 @@ export class AudioEngine {
   setMasterVolume(volume: number) {
     // Normal safe master output range: 0.0 (0%) to 1.0 (100% safe maximum level)
     this.masterVolume = Math.max(0, Math.min(1.0, volume))
+    const effective = this.isMuted ? 0 : this.masterVolume
+
     if (this.masterGain && this.ctx) {
-      const effective = this.isMuted ? 0 : this.masterVolume
-      // Smooth 15ms analog rotary transition to eliminate any clicks, pops, distortion or sudden cuts
-      this.masterGain.gain.setTargetAtTime(effective, this.ctx.currentTime, 0.015)
+      try {
+        this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime)
+        this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, this.ctx.currentTime)
+        this.masterGain.gain.linearRampToValueAtTime(effective, this.ctx.currentTime + 0.015)
+      } catch {
+        this.masterGain.gain.setValueAtTime(effective, this.ctx.currentTime)
+      }
     }
-    // Backup sync for HTML5 Audio track elements without interrupting playback
+
+    // Direct fail-safe sync on all backing audio track elements in real time
     this.trackAudios.forEach(audio => {
       try {
-        if (!this.trackMediaSources.has(audio.src)) {
-          audio.volume = this.isMuted ? 0 : this.masterVolume
-        }
+        audio.volume = effective
       } catch {}
     })
   }
@@ -629,16 +635,21 @@ export class AudioEngine {
 
   setMuted(muted: boolean) {
     this.isMuted = muted
+    const effective = this.isMuted ? 0 : this.masterVolume
+
     if (this.masterGain && this.ctx) {
-      const effective = this.isMuted ? 0 : this.masterVolume
-      // Smooth transition to mute / unmute without resetting playback tracks
-      this.masterGain.gain.setTargetAtTime(effective, this.ctx.currentTime, 0.015)
+      try {
+        this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime)
+        this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, this.ctx.currentTime)
+        this.masterGain.gain.linearRampToValueAtTime(effective, this.ctx.currentTime + 0.015)
+      } catch {
+        this.masterGain.gain.setValueAtTime(effective, this.ctx.currentTime)
+      }
     }
+
     this.trackAudios.forEach(audio => {
       try {
-        if (!this.trackMediaSources.has(audio.src)) {
-          audio.volume = this.isMuted ? 0 : this.masterVolume
-        }
+        audio.volume = effective
       } catch {}
     })
   }

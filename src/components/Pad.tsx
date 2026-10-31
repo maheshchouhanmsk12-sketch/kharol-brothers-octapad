@@ -7,6 +7,8 @@ interface PadProps {
   config: PadConfig
   state: PadState
   index: number
+  masterVolume?: number
+  isMasterMuted?: boolean
   isTrack?: boolean
   isPlayingTrack?: boolean
   onHit: (id: InstrumentId, velocity?: number) => void
@@ -26,6 +28,8 @@ export const Pad: React.FC<PadProps> = ({
   config,
   state,
   index,
+  masterVolume = 0.85,
+  isMasterMuted = false,
   isTrack = false,
   isPlayingTrack = false,
   onHit,
@@ -365,10 +369,35 @@ export const Pad: React.FC<PadProps> = ({
           </div>
         </div>
 
-        {/* Bottom: Category & Volume % */}
-        <div className="relative z-10 flex items-center justify-between text-[10px] font-mono text-zinc-500 pointer-events-none">
-          <span className="uppercase tracking-widest">{config.category}</span>
-          <span>{Math.round(state.volume * 100)}%</span>
+        {/* Bottom: Category & Volume % scaled in real time with Master Volume Dial */}
+        <div className="relative z-10 flex items-center justify-between text-[10px] font-mono pointer-events-auto">
+          <span className="uppercase tracking-widest text-zinc-500 pointer-events-none">{config.category}</span>
+          
+          {/* Active Pad Output Volume showing live level scaled with Master Dial */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowSettings(prev => !prev)
+            }}
+            title={`Pad ${index + 1} Output Volume: ${
+              isMasterMuted || state.isMuted ? 'MUTE' : `${Math.round(state.volume * masterVolume * 100)}%`
+            } (Click to open pad trimmer)`}
+            className={`font-bold font-mono px-1.5 py-0.5 rounded transition-all cursor-pointer flex items-center gap-1 ${
+              isMasterMuted || state.isMuted || masterVolume === 0
+                ? 'text-red-400 bg-red-950/40 border border-red-800/40'
+                : masterVolume < 0.35
+                  ? 'text-cyan-300 bg-zinc-900/80 border border-cyan-800/40'
+                  : 'text-cyan-400 hover:text-white bg-zinc-900/60 hover:bg-zinc-800 border border-zinc-800'
+            }`}
+          >
+            <span>VOL</span>
+            <span>
+              {isMasterMuted || state.isMuted || masterVolume === 0
+                ? '0%'
+                : `${Math.round(state.volume * masterVolume * 100)}%`}
+            </span>
+          </button>
         </div>
       </div>
 
