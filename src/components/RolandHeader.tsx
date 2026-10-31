@@ -1,6 +1,7 @@
 import React from 'react'
 import { KitNumber, PresetDetails, PresetMode, TuneSetNumber } from '../types/octapad'
 import { Volume2, VolumeX, Circle, Play, Square, Clock, HelpCircle, Cpu, Settings } from 'lucide-react'
+import { RotaryVolumeKnob } from './RotaryVolumeKnob'
 
 interface RolandHeaderProps {
   currentPreset: PresetMode
@@ -238,23 +239,15 @@ export const RolandHeader: React.FC<RolandHeaderProps> = ({
 
           <div className="h-6 w-px bg-zinc-800 hidden sm:block" />
 
-          {/* Master Mute & Volume */}
-          <div className="flex items-center gap-1.5 bg-zinc-900/90 px-2 py-1 rounded border border-zinc-800">
-            <button
-              onClick={onToggleMute}
-              className="text-zinc-400 hover:text-white cursor-pointer"
-              title={isMuted ? 'Unmute' : 'Mute'}
-            >
-              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5" />}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1.5"
-              step="0.05"
-              value={isMuted ? 0 : masterVolume}
-              onChange={(e) => onMasterVolumeChange(parseFloat(e.target.value))}
-              className="w-16 accent-cyan-400 cursor-pointer"
+          {/* Professional Rotary Master Volume Knob */}
+          <div className="flex items-center px-2 py-1 rounded-xl bg-zinc-950/70 border border-zinc-800/80 shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
+            <RotaryVolumeKnob
+              volume={masterVolume}
+              isMuted={isMuted}
+              onVolumeChange={onMasterVolumeChange}
+              onToggleMute={onToggleMute}
+              size={46}
+              label="MASTER"
             />
           </div>
 

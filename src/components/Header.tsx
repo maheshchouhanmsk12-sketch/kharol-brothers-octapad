@@ -1,6 +1,7 @@
 import React from 'react'
 import { PresetMode, PresetDetails } from '../types/octapad'
 import { Volume2, VolumeX, Sparkles, HelpCircle, Music2, Cpu } from 'lucide-react'
+import { RotaryVolumeKnob } from './RotaryVolumeKnob'
 
 interface HeaderProps {
   currentPreset: PresetMode
@@ -85,32 +86,16 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right Controls: Master Volume, Engine Info, Key Guide */}
         <div className="flex items-center gap-3">
           
-          {/* Master Volume Fader & Mute */}
-          <div className="flex items-center gap-2 bg-stone-900/80 px-3 py-1.5 rounded-xl border border-stone-800">
-            <button
-              onClick={onToggleMute}
-              className={`p-1.5 rounded-lg transition-colors ${
-                isMuted 
-                  ? 'bg-red-900/40 text-red-400 border border-red-700/50' 
-                  : 'text-amber-300 hover:text-amber-100'
-              }`}
-              title={isMuted ? 'Unmute Master' : 'Mute Master'}
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1.5"
-              step="0.05"
-              value={isMuted ? 0 : masterVolume}
-              onChange={(e) => onMasterVolumeChange(parseFloat(e.target.value))}
-              className="w-20 sm:w-24 accent-amber-500"
-              title={`Master Volume: ${Math.round(masterVolume * 100)}%`}
+          {/* Rotary Master Volume Knob */}
+          <div className="flex items-center px-2 py-1 rounded-xl bg-stone-900/80 border border-stone-800">
+            <RotaryVolumeKnob
+              volume={masterVolume}
+              isMuted={isMuted}
+              onVolumeChange={onMasterVolumeChange}
+              onToggleMute={onToggleMute}
+              size={46}
+              label="MASTER"
             />
-            <span className="font-mono text-[11px] text-amber-400/90 w-8 text-right font-medium">
-              {isMuted ? '0%' : `${Math.round(masterVolume * 100)}%`}
-            </span>
           </div>
 
           {/* Sound Engine Status Button */}

@@ -98,7 +98,18 @@ export const App: React.FC = () => {
   })
 
   const [currentPreset, setCurrentPreset] = useState<PresetMode>('bhajan')
-  const [masterVolume, setMasterVolume] = useState(0.85)
+  const [masterVolume, setMasterVolume] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('octapad_user_settings')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (typeof parsed.masterVolume === 'number') {
+          return Math.max(0, Math.min(1.0, parsed.masterVolume))
+        }
+      }
+    } catch {}
+    return 0.85
+  })
   const [isMuted, setIsMuted] = useState(false)
   const [reverbAmount, setReverbAmount] = useState(0.35)
 
@@ -467,9 +478,10 @@ export const App: React.FC = () => {
   }
 
   const handleMasterVolumeChange = (vol: number) => {
-    setMasterVolume(vol)
-    audioEngine.setMasterVolume(vol)
-    if (isMuted && vol > 0) {
+    const clamped = Math.max(0, Math.min(1.0, vol))
+    setMasterVolume(clamped)
+    audioEngine.setMasterVolume(clamped)
+    if (isMuted && clamped > 0) {
       setIsMuted(false)
       audioEngine.setMuted(false)
     }

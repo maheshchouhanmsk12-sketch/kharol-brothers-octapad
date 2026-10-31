@@ -606,10 +606,21 @@ export class AudioEngine {
   // --- Volume & Audio Controls ---
 
   setMasterVolume(volume: number) {
-    this.masterVolume = Math.max(0, Math.min(1.5, volume))
+    // Normal safe master output range: 0.0 (0%) to 1.0 (100% safe maximum level)
+    this.masterVolume = Math.max(0, Math.min(1.0, volume))
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVolume, this.ctx.currentTime)
+      const effective = this.isMuted ? 0 : this.masterVolume
+      // Smooth 15ms analog rotary transition to eliminate any clicks, pops, distortion or sudden cuts
+      this.masterGain.gain.setTargetAtTime(effective, this.ctx.currentTime, 0.015)
     }
+    // Backup sync for HTML5 Audio track elements without interrupting playback
+    this.trackAudios.forEach(audio => {
+      try {
+        if (!this.trackMediaSources.has(audio.src)) {
+          audio.volume = this.isMuted ? 0 : this.masterVolume
+        }
+      } catch {}
+    })
   }
 
   getMasterVolume(): number {
@@ -619,8 +630,17 @@ export class AudioEngine {
   setMuted(muted: boolean) {
     this.isMuted = muted
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVolume, this.ctx.currentTime)
+      const effective = this.isMuted ? 0 : this.masterVolume
+      // Smooth transition to mute / unmute without resetting playback tracks
+      this.masterGain.gain.setTargetAtTime(effective, this.ctx.currentTime, 0.015)
     }
+    this.trackAudios.forEach(audio => {
+      try {
+        if (!this.trackMediaSources.has(audio.src)) {
+          audio.volume = this.isMuted ? 0 : this.masterVolume
+        }
+      } catch {}
+    })
   }
 
   getIsMuted(): boolean {
